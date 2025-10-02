@@ -279,9 +279,13 @@ class BabyTracker:
         self.poop_window.attributes('-topmost', True)
         self.poop_window.config(bg='#2c3e50')
 
-        # Liste pour garder trace des labels emoji et leurs images
-        self.poop_labels = []
+        # Canvas pour dessiner les emojis (permet superposition sans bordures)
+        self.poop_canvas = tk.Canvas(self.poop_window, bg='#2c3e50', highlightthickness=0)
+        self.poop_canvas.pack(expand=True, fill='both')
+
+        # Liste pour garder trace des images
         self.poop_images = []  # Garder références pour éviter garbage collection
+        self.poop_positions = []  # Garder trace des positions pour éviter chevauchement
 
         # Dessiner les emojis initiaux après que la fenêtre soit prête
         self.root.after(100, self.setup_poop_window)
@@ -303,56 +307,71 @@ class BabyTracker:
 
     def update_poop_emojis(self):
         """Met à jour les emojis poop avec des images"""
-        # Détruire tous les labels existants
-        for label in self.poop_labels:
-            label.destroy()
-        self.poop_labels.clear()
+        # Nettoyer le canvas
+        self.poop_canvas.delete('all')
         self.poop_images.clear()
+        self.poop_positions.clear()
 
         # Obtenir les dimensions de la fenêtre
         self.root.update_idletasks()
         width = self.poop_window.winfo_width() if self.poop_window.winfo_width() > 1 else self.root.winfo_width()
         height = self.poop_window.winfo_height() if self.poop_window.winfo_height() > 1 else self.root.winfo_height()
 
-        # Créer un label pour chaque couche du jour
-        for _ in range(self.data['couches_jour']):
-            # Position aléatoire (en pourcentage)
-            # Zones évitées: centre où se trouvent les boutons (0.2-0.8 horizontal, 0.2-0.8 vertical)
-            # Privilégier les coins et bords
-            if random.random() < 0.5:
-                # Coins gauche ou droit
-                x = random.uniform(0.02, 0.15) if random.random() < 0.5 else random.uniform(0.85, 0.98)
-                y = random.uniform(0.1, 0.9)
-            else:
-                # Bords haut ou bas
-                x = random.uniform(0.15, 0.85)
-                y = random.uniform(0.02, 0.12) if random.random() < 0.5 else random.uniform(0.88, 0.98)
+        # Créer un emoji pour chaque couche du jour
+        attempts = 0
+        max_attempts = 100
+        for i in range(self.data['couches_jour']):
+            placed = False
+            while not placed and attempts < max_attempts:
+                attempts += 1
 
-            # Taille aléatoire (40-70 pixels - plus petit pour être moins intrusif)
-            size = random.randint(40, 70)
+                # Position aléatoire (en pourcentage)
+                # Zones évitées: centre où se trouvent les boutons (0.2-0.8 horizontal, 0.2-0.8 vertical)
+                # Privilégier les coins et bords
+                if random.random() < 0.5:
+                    # Coins gauche ou droit
+                    x_rel = random.uniform(0.02, 0.15) if random.random() < 0.5 else random.uniform(0.85, 0.98)
+                    y_rel = random.uniform(0.1, 0.9)
+                else:
+                    # Bords haut ou bas
+                    x_rel = random.uniform(0.15, 0.85)
+                    y_rel = random.uniform(0.02, 0.12) if random.random() < 0.5 else random.uniform(0.88, 0.98)
 
-            # Angle aléatoire (-30 à +30 degrés)
-            angle = random.randint(-30, 30)
+                # Taille aléatoire (60-90 pixels)
+                size = random.randint(60, 90)
 
-            # Redimensionner et faire pivoter l'image
-            resized = self.poop_base_image.resize((size, size), Image.Resampling.LANCZOS)
-            rotated = resized.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
+                # Convertir en pixels absolus
+                x_px = int(x_rel * width)
+                y_px = int(y_rel * height)
 
-            # Convertir pour tkinter
-            photo = ImageTk.PhotoImage(rotated)
-            self.poop_images.append(photo)  # Garder référence
+                # Vérifier chevauchement avec emojis existants
+                overlap = False
+                for px, py, psize in self.poop_positions:
+                    # Distance entre centres
+                    dist = ((x_px - px)**2 + (y_px - py)**2)**0.5
+                    min_dist = (size + psize) / 2 + 10  # +10 pixels de marge
+                    if dist < min_dist:
+                        overlap = True
+                        break
 
-            # Créer le label avec l'image dans la fenêtre transparente
-            label = tk.Label(
-                self.poop_window,
-                image=photo,
-                bg='#2c3e50',
-                borderwidth=0,
-                highlightthickness=0
-            )
-            label.place(relx=x, rely=y, anchor='center')
+                if not overlap:
+                    # Angle aléatoire (-30 à +30 degrés)
+                    angle = random.randint(-30, 30)
 
-            self.poop_labels.append(label)
+                    # Redimensionner et faire pivoter l'image
+                    resized = self.poop_base_image.resize((size, size), Image.Resampling.LANCZOS)
+                    rotated = resized.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
+
+                    # Convertir pour tkinter
+                    photo = ImageTk.PhotoImage(rotated)
+                    self.poop_images.append(photo)  # Garder référence
+
+                    # Dessiner sur le canvas
+                    self.poop_canvas.create_image(x_px, y_px, image=photo, anchor='center')
+
+                    # Enregistrer la position
+                    self.poop_positions.append((x_px, y_px, size))
+                    placed = True
 
     def get_color(self, status, active=False):
         """Retourne la couleur selon le statut"""
