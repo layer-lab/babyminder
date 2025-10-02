@@ -4,6 +4,7 @@ from datetime import datetime, date
 import json
 import os
 from pathlib import Path
+import random
 
 class BabyTracker:
     def __init__(self):
@@ -147,7 +148,70 @@ class BabyTracker:
             bg='#2c3e50'
         )
         self.date_label.place(relx=0.02, rely=0.02, anchor='nw')
+
+        # Toplevel transparent pour les emojis
+        self.poop_window = tk.Toplevel(self.root)
+        self.poop_window.withdraw()  # Cacher temporairement
+        self.poop_window.overrideredirect(True)
+        self.poop_window.attributes('-transparentcolor', '#2c3e50')
+        self.poop_window.attributes('-topmost', True)
+        self.poop_window.config(bg='#2c3e50')
+
+        # Liste pour garder trace des labels emoji
+        self.poop_labels = []
+
+        # Dessiner les emojis initiaux après que la fenêtre soit prête
+        self.root.after(100, self.setup_poop_window)
         
+    def setup_poop_window(self):
+        """Configure la fenêtre transparente pour les emojis"""
+        # Positionner la fenêtre au-dessus de la fenêtre principale
+        self.root.update_idletasks()
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+
+        self.poop_window.geometry(f"{width}x{height}+{x}+{y}")
+        self.poop_window.deiconify()
+
+        # Dessiner les emojis
+        self.update_poop_emojis()
+
+    def update_poop_emojis(self):
+        """Met à jour les emojis poop avec des labels"""
+        # Détruire tous les labels existants
+        for label in self.poop_labels:
+            label.destroy()
+        self.poop_labels.clear()
+
+        # Obtenir les dimensions de la fenêtre
+        self.root.update_idletasks()
+        width = self.poop_window.winfo_width() if self.poop_window.winfo_width() > 1 else self.root.winfo_width()
+        height = self.poop_window.winfo_height() if self.poop_window.winfo_height() > 1 else self.root.winfo_height()
+
+        # Créer un label pour chaque couche du jour
+        for _ in range(self.data['couches_jour']):
+            # Position aléatoire (en pourcentage)
+            x = random.uniform(0.05, 0.95)
+            y = random.uniform(0.05, 0.95)
+
+            # Taille aléatoire (60-100)
+            size = random.randint(60, 100)
+
+            # Créer le label emoji dans la fenêtre transparente
+            label = tk.Label(
+                self.poop_window,
+                text='💩',
+                font=('Segoe UI Emoji', size),
+                bg='#2c3e50',
+                borderwidth=0,
+                highlightthickness=0
+            )
+            label.place(relx=x, rely=y, anchor='center')
+
+            self.poop_labels.append(label)
+
     def get_color(self, status, active=False):
         """Retourne la couleur selon le statut"""
         if status:
@@ -192,11 +256,14 @@ class BabyTracker:
         # Mettre à jour le texte du bouton
         couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {self.data['couches_total'] + self.data['couches_jour']}"
         self.btn_couches.config(text=couches_text)
+
+        # Mettre à jour les emojis poop
+        self.update_poop_emojis()
         
     def check_midnight(self):
         """Vérifie périodiquement si on passe à minuit"""
         self.check_new_day()
-        
+
         # Si on a changé de jour, mettre à jour l'interface
         if self.data['date'] == str(date.today()):
             # Mettre à jour les couleurs des boutons
@@ -211,10 +278,13 @@ class BabyTracker:
             # Mettre à jour le texte du bouton couches
             couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {self.data['couches_total'] + self.data['couches_jour']}"
             self.btn_couches.config(text=couches_text)
-            
+
             # Mettre à jour la date affichée
             self.date_label.config(text=datetime.now().strftime("%d/%m/%Y"))
-        
+
+            # Mettre à jour les emojis poop (sera vide si nouveau jour)
+            self.update_poop_emojis()
+
         # Vérifier à nouveau dans 60 secondes
         self.root.after(60000, self.check_midnight)
         
