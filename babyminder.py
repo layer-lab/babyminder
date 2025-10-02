@@ -317,11 +317,19 @@ class BabyTracker:
         # Créer un label pour chaque couche du jour
         for _ in range(self.data['couches_jour']):
             # Position aléatoire (en pourcentage)
-            x = random.uniform(0.05, 0.95)
-            y = random.uniform(0.05, 0.95)
+            # Zones évitées: centre où se trouvent les boutons (0.2-0.8 horizontal, 0.2-0.8 vertical)
+            # Privilégier les coins et bords
+            if random.random() < 0.5:
+                # Coins gauche ou droit
+                x = random.uniform(0.02, 0.15) if random.random() < 0.5 else random.uniform(0.85, 0.98)
+                y = random.uniform(0.1, 0.9)
+            else:
+                # Bords haut ou bas
+                x = random.uniform(0.15, 0.85)
+                y = random.uniform(0.02, 0.12) if random.random() < 0.5 else random.uniform(0.88, 0.98)
 
-            # Taille aléatoire (60-100 pixels)
-            size = random.randint(60, 100)
+            # Taille aléatoire (40-70 pixels - plus petit pour être moins intrusif)
+            size = random.randint(40, 70)
 
             # Angle aléatoire (-30 à +30 degrés)
             angle = random.randint(-30, 30)
