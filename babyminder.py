@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import random
+from PIL import Image, ImageTk
 
 class BabyTracker:
     def __init__(self):
@@ -149,6 +150,10 @@ class BabyTracker:
         )
         self.date_label.place(relx=0.02, rely=0.02, anchor='nw')
 
+        # Charger l'image poop
+        self.poop_image_path = Path(__file__).parent / 'Poop Emoji.png'
+        self.poop_base_image = Image.open(self.poop_image_path)
+
         # Toplevel transparent pour les emojis
         self.poop_window = tk.Toplevel(self.root)
         self.poop_window.withdraw()  # Cacher temporairement
@@ -157,8 +162,9 @@ class BabyTracker:
         self.poop_window.attributes('-topmost', True)
         self.poop_window.config(bg='#2c3e50')
 
-        # Liste pour garder trace des labels emoji
+        # Liste pour garder trace des labels emoji et leurs images
         self.poop_labels = []
+        self.poop_images = []  # Garder références pour éviter garbage collection
 
         # Dessiner les emojis initiaux après que la fenêtre soit prête
         self.root.after(100, self.setup_poop_window)
@@ -179,11 +185,12 @@ class BabyTracker:
         self.update_poop_emojis()
 
     def update_poop_emojis(self):
-        """Met à jour les emojis poop avec des labels"""
+        """Met à jour les emojis poop avec des images"""
         # Détruire tous les labels existants
         for label in self.poop_labels:
             label.destroy()
         self.poop_labels.clear()
+        self.poop_images.clear()
 
         # Obtenir les dimensions de la fenêtre
         self.root.update_idletasks()
@@ -196,14 +203,24 @@ class BabyTracker:
             x = random.uniform(0.05, 0.95)
             y = random.uniform(0.05, 0.95)
 
-            # Taille aléatoire (60-100)
+            # Taille aléatoire (60-100 pixels)
             size = random.randint(60, 100)
 
-            # Créer le label emoji dans la fenêtre transparente
+            # Angle aléatoire (-30 à +30 degrés)
+            angle = random.randint(-30, 30)
+
+            # Redimensionner et faire pivoter l'image
+            resized = self.poop_base_image.resize((size, size), Image.Resampling.LANCZOS)
+            rotated = resized.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
+
+            # Convertir pour tkinter
+            photo = ImageTk.PhotoImage(rotated)
+            self.poop_images.append(photo)  # Garder référence
+
+            # Créer le label avec l'image dans la fenêtre transparente
             label = tk.Label(
                 self.poop_window,
-                text='💩',
-                font=('Segoe UI Emoji', size),
+                image=photo,
                 bg='#2c3e50',
                 borderwidth=0,
                 highlightthickness=0
