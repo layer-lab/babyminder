@@ -10,8 +10,8 @@ class BabyTracker:
         self.root = tk.Tk()
         self.root.title("Baby Tracker")
 
-        # Configuration de la fenêtre 800x480 pour HyperPixel4
-        self.root.geometry('800x480')
+        # Configuration de la fenêtre en plein écran
+        self.root.attributes('-fullscreen', True)
         self.root.resizable(False, False)
         self.root.configure(bg='#2c3e50')
         
@@ -210,7 +210,7 @@ class BabyTracker:
         """Crée l'interface utilisateur"""
         # Frame principal
         main_frame = tk.Frame(self.root, bg='#2c3e50')
-        main_frame.pack(expand=True, fill='both', padx=20, pady=20)
+        main_frame.pack(expand=True, fill='both', padx=20, pady=(60, 20))
 
         # Configuration des colonnes et lignes
         main_frame.grid_columnconfigure(0, weight=1)
@@ -225,7 +225,7 @@ class BabyTracker:
             row=0, column=0,
             bg_color=self.get_color(self.data['soins']),
             command=lambda: self.toggle_task('soins'),
-            font_size=48
+            font_size=38
         )
 
         # Bouton VITAMINES avec effet arrondi
@@ -235,7 +235,7 @@ class BabyTracker:
             row=0, column=1,
             bg_color=self.get_color(self.data['vitamines']),
             command=lambda: self.toggle_task('vitamines'),
-            font_size=48
+            font_size=38
         )
 
         # Bouton compteur de couches avec statistiques
@@ -253,26 +253,7 @@ class BabyTracker:
             font_size=28
         )
 
-        # Bouton quitter (petit, en bas à droite, gardé simple et rond)
-        btn_quit_container = tk.Frame(self.root, bg='#2c3e50')
-        btn_quit_container.place(relx=0.98, rely=0.02, anchor='ne', width=60, height=60)
-
-        btn_quit_canvas = tk.Canvas(btn_quit_container, bg='#2c3e50', highlightthickness=0)
-        btn_quit_canvas.pack(expand=True, fill='both')
-
-        def draw_quit_button(event=None):
-            btn_quit_canvas.delete('all')
-            # Cercle avec ombre
-            btn_quit_canvas.create_oval(5, 5, 55, 55, fill='#1a252f', outline='')
-            btn_quit_canvas.create_oval(0, 0, 50, 50, fill='#e74c3c', outline='')
-            btn_quit_canvas.create_oval(0, 0, 50, 15, fill='#ec7063', outline='')
-            btn_quit_canvas.create_text(25, 25, text='✕', font=('Arial', 24, 'bold'), fill='white')
-
-        btn_quit_canvas.bind('<Configure>', draw_quit_button)
-        btn_quit_canvas.bind('<Button-1>', lambda e: self.quit_app())
-        draw_quit_button()
-        
-        # Label date (en haut à gauche)
+        # Label date (en haut, centré)
         self.date_label = tk.Label(
             self.root,
             text=datetime.now().strftime("%d/%m/%Y"),
@@ -280,7 +261,7 @@ class BabyTracker:
             fg='#95a5a6',
             bg='#2c3e50'
         )
-        self.date_label.place(relx=0.02, rely=0.02, anchor='nw')
+        self.date_label.place(relx=0.5, rely=0.02, anchor='n')
         
     def get_color(self, status, active=False):
         """Retourne la couleur selon le statut"""
