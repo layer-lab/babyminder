@@ -11,9 +11,10 @@ class BabyTracker:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Baby Tracker")
-        
-        # Configuration pour plein écran
-        self.root.attributes('-fullscreen', True)
+
+        # Configuration de la fenêtre 800x480 pour HyperPixel4
+        self.root.geometry('800x480')
+        self.root.resizable(False, False)
         self.root.configure(bg='#2c3e50')
         
         # Chemin du fichier de sauvegarde
@@ -38,13 +39,21 @@ class BabyTracker:
             'soins': False,
             'vitamines': False,
             'couches_jour': 0,
-            'couches_total': 0
+            'couches_total': 0,
+            'jours_total': 0
         }
-        
+
         if self.data_file.exists():
             try:
                 with open(self.data_file, 'r') as f:
                     self.data = json.load(f)
+                    # Migration: ajouter jours_total si manquant
+                    if 'jours_total' not in self.data:
+                        # Estimer les jours basé sur les couches (moyenne ~6-8 par jour)
+                        if self.data.get('couches_total', 0) > 0:
+                            self.data['jours_total'] = max(1, self.data['couches_total'] // 7)
+                        else:
+                            self.data['jours_total'] = 0
             except:
                 self.data = default_data
         else:
@@ -61,6 +70,9 @@ class BabyTracker:
         if self.data['date'] != today:
             # Sauvegarder le nombre de couches du jour dans le total
             self.data['couches_total'] += self.data['couches_jour']
+            # Incrémenter le nombre de jours si on avait des couches
+            if self.data['couches_jour'] > 0:
+                self.data['jours_total'] += 1
             # Réinitialiser pour le nouveau jour
             self.data['date'] = today
             self.data['soins'] = False
@@ -227,7 +239,9 @@ class BabyTracker:
         )
 
         # Bouton compteur de couches avec statistiques
-        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {self.data['couches_total'] + self.data['couches_jour']}"
+        total_couches = self.data['couches_total'] + self.data['couches_jour']
+        moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
+        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
         self.btn_couches = self.create_rounded_button(
             main_frame,
             couches_text,
@@ -235,7 +249,7 @@ class BabyTracker:
             columnspan=2,
             bg_color='#3498db',
             command=self.increment_couches,
-            font_size=32
+            font_size=28
         )
 
         # Bouton quitter (petit, en bas à droite, gardé simple et rond)
@@ -344,6 +358,12 @@ class BabyTracker:
                 x_px = int(x_rel * width)
                 y_px = int(y_rel * height)
 
+                # Zone interdite: centre bas (400 pixels de largeur) où se trouve le bouton de stats
+                # Éviter x entre (width/2 - 200) et (width/2 + 200) en bas (y > height - 150)
+                center_x = width / 2
+                if y_px > height - 150 and abs(x_px - center_x) < 200:
+                    continue  # Essayer une autre position
+
                 # Vérifier chevauchement avec emojis existants
                 overlap = False
                 for px, py, psize in self.poop_positions:
@@ -411,7 +431,9 @@ class BabyTracker:
         self.save_data()
 
         # Mettre à jour le texte du bouton
-        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {self.data['couches_total'] + self.data['couches_jour']}"
+        total_couches = self.data['couches_total'] + self.data['couches_jour']
+        moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
+        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
         self.btn_couches['text'] = couches_text
         self.draw_rounded_button(self.btn_couches)
 
@@ -432,7 +454,9 @@ class BabyTracker:
             self.draw_rounded_button(self.btn_vitamines)
 
             # Mettre à jour le texte du bouton couches
-            couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {self.data['couches_total'] + self.data['couches_jour']}"
+            total_couches = self.data['couches_total'] + self.data['couches_jour']
+            moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
+            couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
             self.btn_couches['text'] = couches_text
             self.draw_rounded_button(self.btn_couches)
 
