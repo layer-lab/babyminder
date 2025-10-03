@@ -143,11 +143,13 @@ class BabyTracker:
                                 outline='', top_only=True)
 
         # Texte au centre
+        # Use DejaVu Sans or Noto Sans for better emoji support on Linux
+        font_family = 'DejaVu Sans' if os.name == 'posix' else 'Arial'
         text_id = canvas.create_text(
             (width - shadow_offset*2) // 2,
             (height - shadow_offset*2) // 2,
             text=button_data['text'],
-            font=('Arial', button_data['font_size'], 'bold'),
+            font=(font_family, button_data['font_size'], 'bold'),
             fill='white',
             justify='center'
         )
