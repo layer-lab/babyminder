@@ -4,8 +4,6 @@ from datetime import datetime, date
 import json
 import os
 from pathlib import Path
-import random
-from PIL import Image, ImageTk
 
 class BabyTracker:
     def __init__(self):
@@ -241,7 +239,8 @@ class BabyTracker:
         # Bouton compteur de couches avec statistiques
         total_couches = self.data['couches_total'] + self.data['couches_jour']
         moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
-        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
+        poop_emojis = "💩" * self.data['couches_jour']
+        couches_text = f"Aujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}  Moyenne: {moyenne:.1f}/jour\n{poop_emojis}"
         self.btn_couches = self.create_rounded_button(
             main_frame,
             couches_text,
@@ -280,119 +279,7 @@ class BabyTracker:
             bg='#2c3e50'
         )
         self.date_label.place(relx=0.02, rely=0.02, anchor='nw')
-
-        # Charger l'image poop
-        self.poop_image_path = Path(__file__).parent / 'Poop Emoji.png'
-        self.poop_base_image = Image.open(self.poop_image_path)
-
-        # Toplevel transparent pour les emojis
-        self.poop_window = tk.Toplevel(self.root)
-        self.poop_window.withdraw()  # Cacher temporairement
-        self.poop_window.overrideredirect(True)
-        self.poop_window.attributes('-transparentcolor', '#2c3e50')
-        self.poop_window.attributes('-topmost', True)
-        self.poop_window.config(bg='#2c3e50')
-
-        # Canvas pour dessiner les emojis (permet superposition sans bordures)
-        self.poop_canvas = tk.Canvas(self.poop_window, bg='#2c3e50', highlightthickness=0)
-        self.poop_canvas.pack(expand=True, fill='both')
-
-        # Liste pour garder trace des images
-        self.poop_images = []  # Garder références pour éviter garbage collection
-        self.poop_positions = []  # Garder trace des positions pour éviter chevauchement
-
-        # Dessiner les emojis initiaux après que la fenêtre soit prête
-        self.root.after(100, self.setup_poop_window)
         
-    def setup_poop_window(self):
-        """Configure la fenêtre transparente pour les emojis"""
-        # Positionner la fenêtre au-dessus de la fenêtre principale
-        self.root.update_idletasks()
-        x = self.root.winfo_x()
-        y = self.root.winfo_y()
-        width = self.root.winfo_width()
-        height = self.root.winfo_height()
-
-        self.poop_window.geometry(f"{width}x{height}+{x}+{y}")
-        self.poop_window.deiconify()
-
-        # Dessiner les emojis
-        self.update_poop_emojis()
-
-    def update_poop_emojis(self):
-        """Met à jour les emojis poop avec des images"""
-        # Nettoyer le canvas
-        self.poop_canvas.delete('all')
-        self.poop_images.clear()
-        self.poop_positions.clear()
-
-        # Obtenir les dimensions de la fenêtre
-        self.root.update_idletasks()
-        width = self.poop_window.winfo_width() if self.poop_window.winfo_width() > 1 else self.root.winfo_width()
-        height = self.poop_window.winfo_height() if self.poop_window.winfo_height() > 1 else self.root.winfo_height()
-
-        # Créer un emoji pour chaque couche du jour
-        attempts = 0
-        max_attempts = 100
-        for i in range(self.data['couches_jour']):
-            placed = False
-            while not placed and attempts < max_attempts:
-                attempts += 1
-
-                # Position aléatoire (en pourcentage)
-                # Zones évitées: centre où se trouvent les boutons (0.2-0.8 horizontal, 0.2-0.8 vertical)
-                # Privilégier les coins et bords
-                if random.random() < 0.5:
-                    # Coins gauche ou droit
-                    x_rel = random.uniform(0.02, 0.15) if random.random() < 0.5 else random.uniform(0.85, 0.98)
-                    y_rel = random.uniform(0.1, 0.9)
-                else:
-                    # Bords haut ou bas
-                    x_rel = random.uniform(0.15, 0.85)
-                    y_rel = random.uniform(0.02, 0.12) if random.random() < 0.5 else random.uniform(0.88, 0.98)
-
-                # Taille aléatoire (60-90 pixels)
-                size = random.randint(60, 90)
-
-                # Convertir en pixels absolus
-                x_px = int(x_rel * width)
-                y_px = int(y_rel * height)
-
-                # Zone interdite: centre bas (400 pixels de largeur) où se trouve le bouton de stats
-                # Éviter x entre (width/2 - 200) et (width/2 + 200) en bas (y > height - 150)
-                center_x = width / 2
-                if y_px > height - 150 and abs(x_px - center_x) < 200:
-                    continue  # Essayer une autre position
-
-                # Vérifier chevauchement avec emojis existants
-                overlap = False
-                for px, py, psize in self.poop_positions:
-                    # Distance entre centres
-                    dist = ((x_px - px)**2 + (y_px - py)**2)**0.5
-                    min_dist = (size + psize) / 2 + 10  # +10 pixels de marge
-                    if dist < min_dist:
-                        overlap = True
-                        break
-
-                if not overlap:
-                    # Angle aléatoire (-30 à +30 degrés)
-                    angle = random.randint(-30, 30)
-
-                    # Redimensionner et faire pivoter l'image
-                    resized = self.poop_base_image.resize((size, size), Image.Resampling.LANCZOS)
-                    rotated = resized.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
-
-                    # Convertir pour tkinter
-                    photo = ImageTk.PhotoImage(rotated)
-                    self.poop_images.append(photo)  # Garder référence
-
-                    # Dessiner sur le canvas
-                    self.poop_canvas.create_image(x_px, y_px, image=photo, anchor='center')
-
-                    # Enregistrer la position
-                    self.poop_positions.append((x_px, y_px, size))
-                    placed = True
-
     def get_color(self, status, active=False):
         """Retourne la couleur selon le statut"""
         if status:
@@ -433,12 +320,10 @@ class BabyTracker:
         # Mettre à jour le texte du bouton
         total_couches = self.data['couches_total'] + self.data['couches_jour']
         moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
-        couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
+        poop_emojis = "💩" * self.data['couches_jour']
+        couches_text = f"Aujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}  Moyenne: {moyenne:.1f}/jour\n{poop_emojis}"
         self.btn_couches['text'] = couches_text
         self.draw_rounded_button(self.btn_couches)
-
-        # Mettre à jour les emojis poop
-        self.update_poop_emojis()
         
     def check_midnight(self):
         """Vérifie périodiquement si on passe à minuit"""
@@ -456,15 +341,13 @@ class BabyTracker:
             # Mettre à jour le texte du bouton couches
             total_couches = self.data['couches_total'] + self.data['couches_jour']
             moyenne = total_couches / self.data['jours_total'] if self.data['jours_total'] > 0 else 0
-            couches_text = f"COUCHE +1\n\nAujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}\nMoyenne: {moyenne:.1f}/jour"
+            poop_emojis = "💩" * self.data['couches_jour']
+            couches_text = f"Aujourd'hui: {self.data['couches_jour']}\nTotal: {total_couches}  Moyenne: {moyenne:.1f}/jour\n{poop_emojis}"
             self.btn_couches['text'] = couches_text
             self.draw_rounded_button(self.btn_couches)
 
             # Mettre à jour la date affichée
             self.date_label.config(text=datetime.now().strftime("%d/%m/%Y"))
-
-            # Mettre à jour les emojis poop (sera vide si nouveau jour)
-            self.update_poop_emojis()
 
         # Vérifier à nouveau dans 60 secondes
         self.root.after(60000, self.check_midnight)
